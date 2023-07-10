@@ -68,83 +68,92 @@ fn disassemble(rom: &Vec<u8>, file_name: String) {
     let high_nib_mask:u8 = 0xF0; // test for a sys call, which can be ignored.
     let low_nib_mask:u8 = 0x0F; // mask out the high portion of the byte
 
+    let mut inst = String::new();
+
+    let jjkjkjk;
+
     let len = rom.len();
-    println!("Len: {len}");
     let mut idx = 0;
     loop {
         let inst0 = rom[idx];
         idx += 1;
-        // let inst1 = rom[idx];
+        let inst1 = rom[idx];
         idx += 1;
 
         // isolate the high nib of the first byte.
         let high_nib:u8 = inst0 >> 4;
         match high_nib {
             0x0 => {
-                let high_nib = (inst0 & high_nib_mask) == 0;
-                let low_nib = (inst0 & low_nib_mask) != 0;
-
-                println!("could sysadd, cls, or ret");
+                match inst1 {
+                    0xE0 => {
+                        inst = String::from("CLR");
+                    },
+                    0xEE => {
+                        inst = String::from("RET");
+                    },
+                    _ => {
+                        let hex0: String = to_hex(inst0, 2);
+                        let hex1: String = to_hex(inst1, 2);
+                        inst = format!("INVEST {hex0}, {hex1}");
+                    },
+                }
             },
             0x1 => {
-                println!("JP");
+                let high_byte = to_hex(inst0, 2);
+                let low_byte = to_hex(inst1, 2);
+                inst = format!("JP 0x{high_byte:}{low_byte}\t\t; Set PC to location");
             },
             0x2 => {
-                println!("CALL addr");
+                inst = String::from("CALL addr");
             },
             0x3 => {
-                println!("SKIP ie EQ");
+                inst = String::from("SKIP ie EQ");
             },
             0x4 => {
-                println!("SKIP NEQ");
+                inst = String::from("SKIP NEQ");
             },
             0x5 => {
-                println!("SKIP X=Y");
+                inst = String::from("SKIP X=Y");
             },
             0x6 => {
-                println!("SET");
+                inst = String::from("SET");
             },
             0x7 => {
-                println!("ADD");
+                inst = String::from("ADD");
             },
             0x8 => {
-                println!("OR");
+                inst = String::from("OR");
             },
             0x9 => {
-                println!("SKIP x!=y");
+                inst = String::from("SKIP x!=y");
             },
             0xA => {
-                println!("LD I");
+                inst = String::from("LD I");
             },
             0xB => {
-                println!("JMP v0");
+                inst = String::from("JMP v0");
             },
             0xC => {
-                println!("RND");
+                inst = String::from("RND");
             },
             0xD => {
-                println!("DRW");
+                inst = String::from("DRW");
             },
             0xE => {
-                println!("SKIP PRESSED");
+                inst = String::from("SKIP PRESSED");
             },
             0xF => {
-                println!("COND LD");
+                inst = String::from("COND LD");
             },
-            _ => println!("wut?"),
+            _ => {
+                inst = String::from("wut");
+            },
         }
 
-        // diss.write_all(hex.as_bytes()).unwrap();
+        diss.write_all(format!("{inst}\n").as_bytes()).unwrap();
         if idx >= len {
             break;
         }
-    }
-
-    // TODO read 2 bytes in at a time.
-    for byte in rom {
-        let hex: String = to_hex(*byte, 2);
-        // println!("Hex: {hex}");
-        diss.write_all(hex.as_bytes()).unwrap();
     }
 }
 
