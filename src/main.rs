@@ -2,6 +2,10 @@ use std::env;
 use std::fs::File;
 use std::io::prelude::*;
 
+/**
+https://tobiasvl.github.io/blog/write-a-chip-8-emulator/
+**/
+
 fn main() -> std::io::Result<()> {
     
     // get the file to load.
@@ -35,7 +39,7 @@ fn xxd(rom: &Vec<u8>, file_name: String) {
 
     let mut row_counter = 0;
     let mut column_counter = 0;
-    let col_byte_limit = 2;
+    let col_byte_limit = 16;
 
     let mut row_string = String::new();
     for byte in rom {
@@ -70,7 +74,13 @@ fn disassemble(rom: &Vec<u8>, file_name: String) {
 
     let mut inst = String::new();
 
-    let jjkjkjk;
+    // Memory has a max size of 4 kB, 4096 bytes
+    // so the max offset could be 0x0FFF
+    // he first 512 bytes, from 0x000 to 0x1FF, are where the original interpreter was located, and should not be used by programs.
+    let _rom_maximum:u16 = 0x0FFF;
+
+    // Rom's start at 0x200 (512 bytes)
+    let mut rom_offset:u16 = 0x200;
 
     let len = rom.len();
     let mut idx = 0;
@@ -79,7 +89,7 @@ fn disassemble(rom: &Vec<u8>, file_name: String) {
         idx += 1;
         let inst1 = rom[idx];
         idx += 1;
-
+        
         // isolate the high nib of the first byte.
         let high_nib:u8 = inst0 >> 4;
         match high_nib {
@@ -89,7 +99,7 @@ fn disassemble(rom: &Vec<u8>, file_name: String) {
                         inst = String::from("CLR");
                     },
                     0xEE => {
-                        inst = String::from("RET");
+                        inst = String::from("RET\n");
                     },
                     _ => {
                         let hex0: String = to_hex(inst0, 2);
@@ -99,24 +109,40 @@ fn disassemble(rom: &Vec<u8>, file_name: String) {
                 }
             },
             0x1 => {
-                let high_byte = to_hex(inst0, 2);
+                // 1nnn
+                let high_byte = to_hex((inst0&low_nib_mask), 2);
                 let low_byte = to_hex(inst1, 2);
                 inst = format!("JP 0x{high_byte:}{low_byte}\t\t; Set PC to location");
             },
             0x2 => {
-                inst = String::from("CALL addr");
+                // 2nnn
+                let high_byte = to_hex((inst0&low_nib_mask), 2);
+                let low_byte = to_hex(inst1, 2);
+                inst = format!("CALL 0x{high_byte:}{low_byte}\t\t; Call subroutine");
             },
             0x3 => {
-                inst = String::from("SKIP ie EQ");
+                // 3xkk
+                let high_byte = to_hex((inst0&low_nib_mask), 1);
+                let low_byte = to_hex(inst1, 2);
+                inst = format!("SE ${high_byte} 0x{low_byte}\t\t; Skip if Vx = value");
             },
             0x4 => {
-                inst = String::from("SKIP NEQ");
+                // 4xkk
+                let high_byte = to_hex(inst0&low_nib_mask, 1);
+                let low_byte = to_hex(inst1, 2);
+                inst = format!("SNE ${high_byte} 0x{low_byte}\t\t; Skip if Vx != value");
             },
             0x5 => {
-                inst = String::from("SKIP X=Y");
+                // 5xy0
+                let high_byte = to_hex(inst0&low_nib_mask, 1);
+                let low_byte = to_hex(inst1&high_nib_mask, 1);
+                inst = format!("SE ${high_byte} ${low_byte}\t\t; Skip if Vx = Vy");
             },
             0x6 => {
-                inst = String::from("SET");
+                // 6xkk
+                let high_byte = to_hex(inst0&low_nib_mask, 1);
+                let low_byte = to_hex(inst1, 2);
+                inst = format!("SET ${high_byte} 0x{low_byte}\t\t; Set Vx to value");
             },
             0x7 => {
                 inst = String::from("ADD");
@@ -150,7 +176,8 @@ fn disassemble(rom: &Vec<u8>, file_name: String) {
             },
         }
 
-        diss.write_all(format!("{inst}\n").as_bytes()).unwrap();
+        diss.write_all(format!("{rom_offset:04X}\t{inst0:02X}{inst1:02X}\t\t{inst}\n").as_bytes()).unwrap();
+        rom_offset += 2;
         if idx >= len {
             break;
         }
@@ -158,5 +185,5 @@ fn disassemble(rom: &Vec<u8>, file_name: String) {
 }
 
 fn to_hex(val: u8, len:usize) -> String {
-    format!("{:01$x}", val, len)
+    format!("{:01$X}", val, len)
 }
