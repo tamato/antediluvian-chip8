@@ -67,7 +67,7 @@ fn xxd(rom: &Vec<u8>, file_name: String) {
 }//}}}
 
 fn disassemble(rom: &Vec<u8>, file_name: String) {
-    let mut disassemed_file = file_name;//{{{
+    let mut disassemed_file = file_name;//{{{{{{
     disassemed_file.push_str(".dis");
     let mut diss = File::create(disassemed_file).unwrap();
 
@@ -114,60 +114,87 @@ fn disassemble(rom: &Vec<u8>, file_name: String) {
             },
             0x1 => {
                 // 1nnn
-                let high_byte = to_hex((inst0&low_nib_mask), 2);
+                let high_byte = to_hex(inst0&low_nib_mask, 1);
                 let low_byte = to_hex(inst1, 2);
-                inst = format!("JP 0x{high_byte:}{low_byte}\t\t; Set PC to location");
+                inst = format!("JP {high_byte}{low_byte}\t\t\t; Set PC to location");
             },
             0x2 => {
                 // 2nnn
-                let high_byte = to_hex((inst0&low_nib_mask), 2);
+                let high_byte = to_hex(inst0&low_nib_mask, 1);
                 let low_byte = to_hex(inst1, 2);
-                inst = format!("CALL 0x{high_byte:}{low_byte}\t\t; Call subroutine");
+                inst = format!("CALL {high_byte:}{low_byte}\t\t; Call subroutine");
             },
             0x3 => {
                 // 3xkk
-                let high_byte = to_hex((inst0&low_nib_mask), 1);
+                let high_byte = to_hex(inst0&low_nib_mask, 1);
                 let low_byte = to_hex(inst1, 2);
-                inst = format!("SE ${high_byte} 0x{low_byte}\t\t; Skip if Vx = value");
+                inst = format!("SE V{high_byte} 0x{low_byte}\t\t; Skip if Vx = value");
             },
             0x4 => {
                 // 4xkk
                 let high_byte = to_hex(inst0&low_nib_mask, 1);
                 let low_byte = to_hex(inst1, 2);
-                inst = format!("SNE ${high_byte} 0x{low_byte}\t\t; Skip if Vx != value");
+                inst = format!("SNE V{high_byte} 0x{low_byte}\t\t; Skip if Vx != value");
             },
             0x5 => {
                 // 5xy0
                 let high_byte = to_hex(inst0&low_nib_mask, 1);
-                let low_byte = to_hex(inst1&high_nib_mask, 1);
-                inst = format!("SE ${high_byte} ${low_byte}\t\t; Skip if Vx = Vy");
+                let low_byte = to_hex((inst1&high_nib_mask)>>4, 1);
+                inst = format!("SE V{high_byte} V{low_byte}\t\t; Skip if Vx = Vy");
             },
             0x6 => {
                 // 6xkk
                 let high_byte = to_hex(inst0&low_nib_mask, 1);
                 let low_byte = to_hex(inst1, 2);
-                inst = format!("SET ${high_byte} 0x{low_byte}\t\t; Set Vx to value");
+                inst = format!("SET V{high_byte} 0x{low_byte}\t\t");
             },
             0x7 => {
-                inst = String::from("ADD");
+                // 7xkk
+                let high_byte = to_hex(inst0&low_nib_mask, 1);
+                let low_byte = to_hex(inst1, 2);
+                inst = format!("ADD V{high_byte} 0x{low_byte}\t\t");
             },
             0x8 => {
+                // 8xy1 - OR Vx Vy
+                // 8xy2 - AND Vx Vy
+                // 8xy3 - XOR Vx Vy
+                // 8xy4 - ADD Vx Vy
+                // 8xy5 - SUB Vx Vy, if Vx > Vy then VF is 1, else 0
+                // 8xy6 - SHR Vx {, Vy}, LSB of Vx, then VF is 1 else 0, then Vx >> 1 (divided by 2)
+                // 8xy7 - SUBN Vx Vy, Vx = Vy - Vx, set VF if Vy > Vx to 1, else 0
+                // 8xyE - SHL Vx {, Vy}, Vx = Vx SHL 1. MSB bit of Vx is 1, then VF is 1. Then Vx << 2
                 inst = String::from("OR");
             },
             0x9 => {
-                inst = String::from("SKIP x!=y");
+                // 9xy0 - SNE Vx Vy, skip iv Vx != Vy
+                let high_byte = to_hex(inst0 & low_nib_mask, 1);
+                let low_byte = to_hex((inst1&high_nib_mask)>>4, 1);
+                inst = format!("SNE V{high_byte} V{low_byte}\t\t; Skip if Vx != Vy");
             },
             0xA => {
-                inst = String::from("LD I");
+                // Annn - LD I addr
+                let high_byte = to_hex(inst0&low_nib_mask, 1);
+                let low_byte = to_hex(inst1, 2);
+                inst = format!("LD I {high_byte}{low_byte}");
             },
             0xB => {
-                inst = String::from("JMP v0");
+                // Bnnn - JP V0 addr
+                let high_byte = to_hex(inst0&low_nib_mask, 1);
+                let low_byte = to_hex(inst1, 2);
+                inst = format!("JP V0 {high_byte}{low_byte}\t\t; PC is set to addr plus V0");
             },
             0xC => {
-                inst = String::from("RND");
+                // Cxkk - RND Vx byte
+                let high_byte = to_hex(inst0&low_nib_mask, 1);
+                let low_byte = to_hex(inst1, 2);
+                inst = format!("RND V{high_byte} {low_byte}\t\t; Rng AND'd with byte, store in Vx");
             },
             0xD => {
-                inst = String::from("DRW");
+                // Dxyn - DRW Vx Vy nibble
+                let x = to_hex(inst0&low_nib_mask, 1);
+                let y = to_hex((inst1&high_nib_mask) >> 4, 1);
+                let n = to_hex(inst1&low_nib_mask, 1);
+                inst = format!("DRW V{x} V{y} 0x{n}\t\t; Draw n-byte sprite starting at I, set VF = collison");
             },
             0xE => {
                 inst = String::from("SKIP PRESSED");
@@ -180,14 +207,14 @@ fn disassemble(rom: &Vec<u8>, file_name: String) {
             },
         }
 
-        diss.write_all(format!("{rom_offset:04X}\t{inst0:02X}{inst1:02X}\t\t{inst}\n").as_bytes()).unwrap();
+        diss.write_all(format!("{rom_offset:04X}\t{inst0:02X} {inst1:02X}\t\t{inst}\n").as_bytes()).unwrap();
         rom_offset += 2;
         if idx >= len {
             break;
         }
     }
-}
+}//}}}
 
 fn to_hex(val: u8, len:usize) -> String {
-    format!("{:01$X}", val, len)
+    format!("{:01$x}", val, len)
 }
