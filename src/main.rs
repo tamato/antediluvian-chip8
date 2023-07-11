@@ -4,6 +4,10 @@ use std::io::prelude::*;
 
 /**
 https://tobiasvl.github.io/blog/write-a-chip-8-emulator/
+
+
+SNES
+https://problemkaputt.de/fullsnes.htm
 **/
 
 fn main() -> std::io::Result<()> {
