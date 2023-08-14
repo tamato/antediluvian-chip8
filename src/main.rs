@@ -2,6 +2,24 @@ use std::env;
 use std::fs::File;
 use std::io::prelude::*;
 
+use yew::{Component, Context, Html};
+
+const HTML: &str = include_str!("document.html");
+pub struct App;
+
+impl Component for App {
+    type Message = ();
+    type Properties = ();
+
+    fn create(_ctx: &Context<Self>) -> Self {
+        Self
+    }
+
+    fn view(&self, _ctx: &Context<Self>) -> Html {
+        Html::from_html_unchecked(HTML.into())
+    }
+}
+
 /**
 
 https://github.com/dmatlack/chip8
@@ -33,6 +51,8 @@ fn main() -> std::io::Result<()> {
         disassemble(&data, file_path.to_owned());
         xxd(&data, file_path.to_owned());
     }
+
+    yew::Renderer::<App>::new().render();
 
     Ok(())
 }
@@ -289,3 +309,4 @@ fn disassemble(rom: &Vec<u8>, file_name: String) {//{{{
 fn to_hex(val: u8, len:usize) -> String {//{{{
     format!("{:01$x}", val, len)
 }//}}}
+
