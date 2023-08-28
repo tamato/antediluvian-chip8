@@ -5,7 +5,6 @@ use std::io::prelude::*;
 /**
 https://tobiasvl.github.io/blog/write-a-chip-8-emulator/
 
-
 SNES
 https://problemkaputt.de/fullsnes.htm
 **/
@@ -36,8 +35,8 @@ fn main() -> std::io::Result<()> {
     Ok(())
 }
 
-fn xxd(rom: &Vec<u8>, file_name: String) {
-    let mut disassemed_file = file_name;//{{{
+fn xxd(rom: &Vec<u8>, file_name: String) {//{{{
+    let mut disassemed_file = file_name;
     disassemed_file.push_str(".xxd");
     let mut diss = File::create(disassemed_file).unwrap();
 
@@ -66,8 +65,8 @@ fn xxd(rom: &Vec<u8>, file_name: String) {
     }
 }//}}}
 
-fn disassemble(rom: &Vec<u8>, file_name: String) {
-    let mut disassemed_file = file_name;//{{{{{{
+fn disassemble(rom: &Vec<u8>, file_name: String) {//{{{
+    let mut disassemed_file = file_name;
     disassemed_file.push_str(".dis");
     let mut diss = File::create(disassemed_file).unwrap();
 
@@ -215,6 +214,6 @@ fn disassemble(rom: &Vec<u8>, file_name: String) {
     }
 }//}}}
 
-fn to_hex(val: u8, len:usize) -> String {
+fn to_hex(val: u8, len:usize) -> String {//{{{
     format!("{:01$x}", val, len)
-}
+}//}}}
