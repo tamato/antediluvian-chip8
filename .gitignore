@@ -1,4 +1,5 @@
-/target
+/rust/target
 /resources/c8roms
+/zig/zig-*
 *.zip
 *.dis
