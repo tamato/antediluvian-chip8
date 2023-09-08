@@ -9,8 +9,8 @@ pub fn main() !void {
     const args = try std.process.argsAlloc(allocator);
     defer std.process.argsFree(allocator, args);
 
-    std.debug.print("Arguments: {s}\n", .{args[1]});
-
+    // command to run program
+    // zig build run -- /home/ahrimen/repos/antediluvian-chip8/zig/../resources/c8roms/GUESS
     if (args.len < 2) {
         return error.InvalidNumberOfArguments;
     }
@@ -27,51 +27,47 @@ fn xxd(rom: std.fs.File, file_name: []const u8) void {
     _ = file_name;
     var buf: [std.mem.page_size]u8 = undefined;
     const reader = rom.reader();
+
+    var row_counter:u32 = 0;
+    const col_byte_limit:u32 = 16;
+
     while (true) {
         const amt_read = reader.read(buf[0..]) catch |err| {
             std.debug.print("Error, {any}", .{err});
             return;
         };
 
-        if (0 == amt_read) break;
+        if (0 == amt_read) {
+            break;
+        }
 
-        for (buf[0..amt_read]) |byte| {
-            std.debug.print("byte: {x}\n", .{byte});
+        // Print 16 bytes at time
+        // how many groups of 8 bytes are there
+        const groups = amt_read / col_byte_limit + 1;
+        var start:usize = 0;
+        for (1..groups) |idx| {
+            const end = idx * col_byte_limit;
+
+            // from fmt.zig
+            //      e.g. {[specifier]:[fill][alignment][width]}
+            std.debug.print("0x{x:0>8}: {x}\n", .{
+                row_counter, 
+                std.fmt.fmtSliceHexLower(buf[start..end])
+            });
+
+            row_counter += col_byte_limit;
+            start = end;
+        }
+
+        // any left over bytes?
+        const remainder = amt_read % col_byte_limit;
+        if (remainder > 0) {
+            std.debug.print("0x{x:0>8}: {x}\n",
+                .{row_counter,
+                    std.fmt.fmtSliceHexLower(buf[start..(start+remainder)])
+                }
+            );
         }
     }
 }
 
-// fn xxd(rom: &Vec<u8>, file_name: String) {//{{{
-//     let mut disassemed_file = file_name;
-//     disassemed_file.push_str(".xxd");
-//     let mut diss = File::create(disassemed_file).unwrap();
-//
-//     let sz = rom.len();
-//     let mut bytes_read:usize = 1;
-//
-//     let mut row_counter:u32 = 0;
-//     let mut column_counter = 0;
-//     let col_byte_limit = 16;
-//
-//     let mut row_string = String::new();
-//     for byte in rom {
-//         let hex = to_hex(*byte, 2);
-//         row_string.push_str(&hex);
-//         column_counter += 1;
-//
-//         // write out the completed line.
-//         if    (column_counter == col_byte_limit)
-//            || (bytes_read == sz) {
-//             column_counter = 0;
-//
-//             let row_hex = format!("{row_counter:08X}");
-//             row_counter += col_byte_limit;
-//
-//             row_string = format!("0x{row_hex}: {row_string}\n");
-//             diss.write_all(row_string.as_bytes()).unwrap();
-//             row_string.clear();
-//         }
-//
-//         bytes_read += 1;
-//     }
-// }//}}}
