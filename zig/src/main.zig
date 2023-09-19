@@ -23,11 +23,25 @@ pub fn main() !void {
     xxd(rom, file_path);
 }
 
-fn xxd(rom: std.fs.File, file_name: []const u8) void {
-    _ = file_name;
+fn xxd(rom: std.fs.File, file_name: []const u8) void {// {{{
     var buf: [std.mem.page_size]u8 = undefined;
     const reader = rom.reader();
 
+    var name: [100:0]u8 = undefined;
+    const slice = std.fmt.bufPrint(&name, "{s}.xxd", .{ std.fs.path.basename(file_name)} ) 
+        catch |err| {
+            std.debug.print("Error, failed to format file name, {any}\n", .{err});
+            return; 
+    };
+
+    const file = std.fs.cwd().createFile( slice, .{}) 
+        catch |err| {
+            std.debug.print("Error, failed to create xxd file, {any}\n", .{err});
+            return;
+    };
+    defer file.close();
+
+    var row: [100:0]u8 = undefined;
     var row_counter:u32 = 0;
     const col_byte_limit:u32 = 16;
 
@@ -48,12 +62,7 @@ fn xxd(rom: std.fs.File, file_name: []const u8) void {
         for (1..groups) |idx| {
             const end = idx * col_byte_limit;
 
-            // from fmt.zig
-            //      e.g. {[specifier]:[fill][alignment][width]}
-            std.debug.print("0x{x:0>8}: {x}\n", .{
-                row_counter, 
-                std.fmt.fmtSliceHexLower(buf[start..end])
-            });
+            writeToFile(file, row[0..], buf[start..end], row_counter);
 
             row_counter += col_byte_limit;
             start = end;
@@ -62,12 +71,24 @@ fn xxd(rom: std.fs.File, file_name: []const u8) void {
         // any left over bytes?
         const remainder = amt_read % col_byte_limit;
         if (remainder > 0) {
-            std.debug.print("0x{x:0>8}: {x}\n",
-                .{row_counter,
-                    std.fmt.fmtSliceHexLower(buf[start..(start+remainder)])
-                }
-            );
+            writeToFile(file, row[0..], buf[start..(start+remainder)], row_counter);
         }
     }
-}
+}// }}}
+
+pub fn writeToFile(file: std.fs.File, row:[]u8, from_buf:[]u8, row_counter:u32) void {// {{{
+    // from fmt.zig
+    //      e.g. {[specifier]:[fill][alignment][width]}
+    const filled = std.fmt.bufPrint(row, "0x{x:0>8}: {x}\n", 
+        .{row_counter, std.fmt.fmtSliceHexLower(from_buf)})
+        catch |err| {
+            std.debug.print("Error, {any}\n", .{err});
+            return;
+    };
+
+    _ = file.write(filled) catch |err| {
+        std.debug.print("Error, {any}\n", .{err});
+        return;
+    };
+}// }}}
 
