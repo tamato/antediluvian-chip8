@@ -10,7 +10,7 @@ pub fn main() !void {
     defer std.process.argsFree(allocator, args);
 
     // command to run program
-    // zig build run -- /home/ahrimen/repos/antediluvian-chip8/zig/../resources/c8roms/GUESS
+    // zig build-exe run -- /home/ahrimen/repos/antediluvian-chip8/../resources/c8roms/GUESS
     if (args.len < 2) {
         return error.InvalidNumberOfArguments;
     }
