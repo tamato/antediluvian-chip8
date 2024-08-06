@@ -10,7 +10,7 @@ pub fn main() !void {
     defer std.process.argsFree(allocator, args);
 
     // command to run program
-    // zig build-exe run -- /home/ahrimen/repos/antediluvian-chip8/../resources/c8roms/GUESS
+    // zig build run -- /home/ahrimen/repos/antediluvian-chip8/resources/c8roms/Guess.ch8
     if (args.len < 2) {
         return error.InvalidNumberOfArguments;
     }
@@ -19,14 +19,13 @@ pub fn main() !void {
     const file_path = args[1];
     const rom = try std.fs.openFileAbsolute(file_path, .{} );
     defer rom.close();
+
+    std.debug.print("\nGot file {s}\n", .{file_path});
     
     xxd(rom, file_path);
 }
 
 fn xxd(rom: std.fs.File, file_name: []const u8) void {// {{{
-    var buf: [std.mem.page_size]u8 = undefined;
-    const reader = rom.reader();
-
     var name: [100:0]u8 = undefined;
     const slice = std.fmt.bufPrint(&name, "{s}.xxd", .{ std.fs.path.basename(file_name)} ) 
         catch |err| {
@@ -45,6 +44,8 @@ fn xxd(rom: std.fs.File, file_name: []const u8) void {// {{{
     var row_counter:u32 = 0;
     const col_byte_limit:u32 = 16;
 
+    const reader = rom.reader();
+    var buf: [std.mem.page_size]u8 = undefined;
     while (true) {
         const amt_read = reader.read(buf[0..]) catch |err| {
             std.debug.print("Error, {any}", .{err});
