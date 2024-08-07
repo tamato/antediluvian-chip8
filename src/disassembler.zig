@@ -67,8 +67,8 @@ pub fn disassemble(rom: std.fs.File, file_name: []const u8) !void {// {{{
         const opCodeSize: usize = 2;
         var iter = std.mem.window(u8, &buf, opCodeSize, opCodeSize);
         while (iter.next()) |bytes| {
-            var string:[]u8 = .{.len = 0};
-            var log:[100:0]u8 = undefijj;
+            var string: ?[]u8 = null;
+            var log:[100:0]u8 = undefined;
             
             // The high nibble of bytes[0] contains the command
             // the lower nibble holds the variable part of the command.
@@ -98,7 +98,7 @@ pub fn disassemble(rom: std.fs.File, file_name: []const u8) !void {// {{{
                     // to get NNN from the high byte and low byte, combine them
                     // knock off the high nibble
                     const jumpAddr:u16 = @as(u16, (bytes[0] & 0x0F) << 0x4 | bytes[1]);
-                    string = try bufPrint(&log, "Call subroutine at {d}", .{jumpAddr});
+                    string = try bufPrint(&log, "Call subroutine at 0x{x:0>4}", .{jumpAddr});
                 },
                 0x3 => {
                     // If vx != NN then
@@ -120,12 +120,11 @@ pub fn disassemble(rom: std.fs.File, file_name: []const u8) !void {// {{{
                 },
                 else => {},
             }
-            if (string.len == 0) continue;
-
-
-            // Write the log out to a *.dis file
-            if (iter.index) |offset| {
-                writeToFile(file, offset - opCodeSize, bytes, string);
+            if (string) |ss| {
+                // Write the log out to a *.dis file
+                if (iter.index) |offset| {
+                    writeToFile(file, offset - opCodeSize, bytes, ss);
+                }
             }
         }
     }
