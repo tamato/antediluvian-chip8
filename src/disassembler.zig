@@ -69,11 +69,7 @@ pub fn disassemble(rom: std.fs.File, file_name: []const u8) !void {
         while (iter.next()) |bytes| {
             var log: []u8 = &.{}; // "zero-init"
             var log_storage:[100:0]u8 = undefined;
-            const offset = if (iter.index) |off| blk: {
-                break :blk (off - opCodeSize);
-            } else blk: {
-                break :blk amt_read;
-            };
+            const offset = iter.index orelse amt_read;
             
             // The high nibble of bytes[0] contains the command
             // the lower nibble holds the variable part of the command.
@@ -127,7 +123,7 @@ pub fn disassemble(rom: std.fs.File, file_name: []const u8) !void {
             }
 
             // Write the log out to a *.dis file
-            writeToFile(file, offset, bytes, log);
+            writeToFile(file, offset - opCodeSize, bytes, log);
         }
     }
 }
