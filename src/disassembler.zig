@@ -31,7 +31,7 @@ pub fn main() !void {
     };
 }
 
-pub fn disassemble(rom: std.fs.File, file_name: []const u8) !void {// {{{
+pub fn disassemble(rom: std.fs.File, file_name: []const u8) !void {
     var name: [100:0]u8 = undefined;
     const slice = bufPrint(&name, "{s}.dis", .{ std.fs.path.basename(file_name)} ) 
         catch |err| {
@@ -127,9 +127,9 @@ pub fn disassemble(rom: std.fs.File, file_name: []const u8) !void {// {{{
             }
         }
     }
-}// }}}
+}
 
-pub fn writeToFile(file: std.fs.File, row_counter:usize, opCodes:[]const u8, dis:[]u8) void {// {{{
+pub fn writeToFile(file: std.fs.File, row_counter:usize, opCodes:[]const u8, dis:[]const u8) void {
     var buf:[300:0]u8 = undefined;
     // from fmt.zig
     //      e.g. {[specifier]:[fill][alignment][width]}
@@ -144,5 +144,5 @@ pub fn writeToFile(file: std.fs.File, row_counter:usize, opCodes:[]const u8, dis
         std.debug.print("Error, {any}\n", .{err});
         return;
     };
-}// }}}
+}
 
