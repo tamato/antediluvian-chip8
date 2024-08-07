@@ -66,19 +66,21 @@ pub fn disassemble(rom: std.fs.File, file_name: []const u8) !void {// {{{
 
         const opCodeSize: usize = 2;
         var iter = std.mem.window(u8, &buf, opCodeSize, opCodeSize);
-        var log: [100:0]u8 = undefined;
-        for (iter, 0..) |bytes, byte_offset| {
+        while (iter.next()) |bytes| {
+            var string:[]u8 = .{.len = 0};
+            var log:[100:0]u8 = undefijj;
+            
             // The high nibble of bytes[0] contains the command
             // the lower nibble holds the variable part of the command.
             const highNibble:u8 = bytes[0] >> 4;
             switch (highNibble) {
                 0x0 => {
                     switch (bytes[1]) {
-                        0x0E => _ = try bufPrint(&log, "Clear Screen", .{}),
-                        0xEE => _ = try bufPrint(&log, "Exit Subroutine", .{}),
+                        0x0E => string = try bufPrint(&log, "Clear Screen", .{}),
+                        0xEE => string = try bufPrint(&log, "Exit Subroutine", .{}),
                         else => {
                             // Jump to a machine code routine at nnn, older
-                            _ = try bufPrint(&log, "Jump to sys addr 0x{x:0>2}{x:0>2}\n", .{bytes[0], bytes[1]});
+                            string = try bufPrint(&log, "Jump to sys addr 0x{x:0>2}{x:0>2}", .{bytes[0], bytes[1]});
                         },
                     }
                 },
@@ -86,51 +88,56 @@ pub fn disassemble(rom: std.fs.File, file_name: []const u8) !void {// {{{
                     // to get NNN from the high byte and low byte, combine them
                     // knock off the high nibble
                     const jumpAddr:u16 = @as(u16, (bytes[0] & 0x0F) << 0x4 | bytes[1]);
-                    _ = try bufPrint(&log, "Set PC to {d}\n", .{jumpAddr});
+                    string = try bufPrint(&log, "Set PC to {d}", .{jumpAddr});
                 },
                 0x2 => {
                     // Call subroutine at nnn.
-                    // The interpreter increments the stack pointer, 
+                    // The interpreter increments the stack pointer,
                     // then puts the current PC on the top of the stack. The PC is then set to nnn.
 
                     // to get NNN from the high byte and low byte, combine them
                     // knock off the high nibble
                     const jumpAddr:u16 = @as(u16, (bytes[0] & 0x0F) << 0x4 | bytes[1]);
-                    _ = try bufPrint(&log, "Call subroutine at {d}\n", .{jumpAddr});
+                    string = try bufPrint(&log, "Call subroutine at {d}", .{jumpAddr});
                 },
                 0x3 => {
                     // If vx != NN then
                     const vx:u8 = bytes[0] & 0x0F;
                     const NN = bytes[1];
-                    _ = try bufPrint(&log, "If V{x} != {d}\n", .{vx, NN});
+                    string = try bufPrint(&log, "If V{x} != {d}", .{vx, NN});
                 },
                 0x4 => {
                     // If vx == NN then
                     const vx:u8 = bytes[0] & 0x0F;
                     const NN = bytes[1];
-                    _ = try bufPrint(&log, "If V{x} == {d}\n", .{vx, NN});
+                    string = try bufPrint(&log, "If V{x} == {d}", .{vx, NN});
                 },
                 0x5 => {
                     // If vx != vy then
                     const vx:u8 = bytes[0] & 0x0F;
                     const vy:u8 = bytes[1] & 0xF0;
-                    _ = try bufPrint(&log, "If V{x} == V{x}\n", .{vx, vy});
+                    string = try bufPrint(&log, "If V{x} == V{x}", .{vx, vy});
                 },
                 else => {},
             }
+            if (string.len == 0) continue;
+
 
             // Write the log out to a *.dis file
-            writeToFile(file, byte_offset, bytes, log);
+            if (iter.index) |offset| {
+                writeToFile(file, offset - opCodeSize, bytes, string);
+            }
         }
     }
 }// }}}
 
-pub fn writeToFile(file: std.fs.File, row:[]u8, from_buf:[]u8, row_counter:u32) void {// {{{
+pub fn writeToFile(file: std.fs.File, row_counter:usize, opCodes:[]const u8, dis:[]u8) void {// {{{
+    var buf:[300:0]u8 = undefined;
     // from fmt.zig
     //      e.g. {[specifier]:[fill][alignment][width]}
-    const filled = bufPrint(row, "0x{x:0>8}: {x}\n", 
-        .{row_counter, std.fmt.fmtSliceHexLower(from_buf)})
-        catch |err| {
+    const filled = bufPrint(&buf, "0x{x:0>4}: {x:0>4} {s}\n", 
+        .{row_counter, std.fmt.fmtSliceHexLower(opCodes), dis}
+    ) catch |err| {
             std.debug.print("Error, {any}\n", .{err});
             return;
     };
