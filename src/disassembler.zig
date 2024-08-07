@@ -46,7 +46,6 @@ pub fn disassemble(rom: std.fs.File, file_name: []const u8) !void {// {{{
     };
     defer file.close();
 
-    var buf: [std.mem.page_size]u8 = undefined;
     const reader = rom.reader();
    
     //
@@ -55,7 +54,8 @@ pub fn disassemble(rom: std.fs.File, file_name: []const u8) !void {// {{{
     // The Chip-8 language is capable of accessing up to 4KB (4,096 bytes) of RAM, from location 0x000 (0) to 0xFFF (4095). The first 512 bytes, from 0x000 to 0x1FF, are where the original interpreter was located, and should not be used by programs
     // 4096 = 0x1000 hex
     while (true) {
-        const amt_read = reader.read(buf[0..]) catch |err| {
+        var buf = [_]u8{0} ** std.mem.page_size;
+        const amt_read = reader.read(&buf) catch |err| {
             std.debug.print("Error, {any}", .{err});
             return;
         };
@@ -65,10 +65,10 @@ pub fn disassemble(rom: std.fs.File, file_name: []const u8) !void {// {{{
         }
 
         const opCodeSize: usize = 2;
-        var iter = std.mem.window(u8, &buf, opCodeSize, opCodeSize);
+        var iter = std.mem.window(u8, buf[0..amt_read], opCodeSize, opCodeSize);
         while (iter.next()) |bytes| {
-            var string: ?[]u8 = null;
-            var log:[100:0]u8 = undefined;
+            var log: []u8 = &.{}; // "zero-init"
+            var log_storage:[100:0]u8 = undefined;
             
             // The high nibble of bytes[0] contains the command
             // the lower nibble holds the variable part of the command.
@@ -76,11 +76,11 @@ pub fn disassemble(rom: std.fs.File, file_name: []const u8) !void {// {{{
             switch (highNibble) {
                 0x0 => {
                     switch (bytes[1]) {
-                        0x0E => string = try bufPrint(&log, "Clear Screen", .{}),
-                        0xEE => string = try bufPrint(&log, "Exit Subroutine", .{}),
+                        0x0E => log = try bufPrint(&log_storage, "Clear Screen", .{}),
+                        0xEE => log = try bufPrint(&log_storage, "Exit Subroutine", .{}),
                         else => {
                             // Jump to a machine code routine at nnn, older
-                            string = try bufPrint(&log, "Jump to sys addr 0x{x:0>2}{x:0>2}", .{bytes[0], bytes[1]});
+                            log = try bufPrint(&log_storage, "DEPRECATED: Jump to sys addr 0x{x:0>2}{x:0>2}", .{bytes[0], bytes[1]});
                         },
                     }
                 },
@@ -88,7 +88,7 @@ pub fn disassemble(rom: std.fs.File, file_name: []const u8) !void {// {{{
                     // to get NNN from the high byte and low byte, combine them
                     // knock off the high nibble
                     const jumpAddr:u16 = @as(u16, (bytes[0] & 0x0F) << 0x4 | bytes[1]);
-                    string = try bufPrint(&log, "Set PC to {d}", .{jumpAddr});
+                    log = try bufPrint(&log_storage, "Set PC to {d}", .{jumpAddr});
                 },
                 0x2 => {
                     // Call subroutine at nnn.
@@ -98,33 +98,32 @@ pub fn disassemble(rom: std.fs.File, file_name: []const u8) !void {// {{{
                     // to get NNN from the high byte and low byte, combine them
                     // knock off the high nibble
                     const jumpAddr:u16 = @as(u16, (bytes[0] & 0x0F) << 0x4 | bytes[1]);
-                    string = try bufPrint(&log, "Call subroutine at 0x{x:0>4}", .{jumpAddr});
+                    log = try bufPrint(&log_storage, "Call subroutine at 0x{x:0>4}", .{jumpAddr});
                 },
                 0x3 => {
                     // If vx != NN then
                     const vx:u8 = bytes[0] & 0x0F;
                     const NN = bytes[1];
-                    string = try bufPrint(&log, "If V{x} != {d}", .{vx, NN});
+                    log = try bufPrint(&log_storage, "If V{x} != {d}", .{vx, NN});
                 },
                 0x4 => {
                     // If vx == NN then
                     const vx:u8 = bytes[0] & 0x0F;
                     const NN = bytes[1];
-                    string = try bufPrint(&log, "If V{x} == {d}", .{vx, NN});
+                    log = try bufPrint(&log_storage, "If V{x} == {d}", .{vx, NN});
                 },
                 0x5 => {
                     // If vx != vy then
                     const vx:u8 = bytes[0] & 0x0F;
                     const vy:u8 = bytes[1] & 0xF0;
-                    string = try bufPrint(&log, "If V{x} == V{x}", .{vx, vy});
+                    log = try bufPrint(&log_storage, "If V{x} == V{x}", .{vx, vy});
                 },
                 else => {},
             }
-            if (string) |ss| {
-                // Write the log out to a *.dis file
-                if (iter.index) |offset| {
-                    writeToFile(file, offset - opCodeSize, bytes, ss);
-                }
+
+            // Write the log out to a *.dis file
+            if (iter.index) |offset| {
+                writeToFile(file, offset - opCodeSize, bytes, log);
             }
         }
     }
