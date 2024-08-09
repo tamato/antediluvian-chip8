@@ -68,8 +68,7 @@ pub fn disassemble(rom: std.fs.File, file_name: []const u8) !void {
         var iter = std.mem.window(u8, buf[0..amt_read], opCodeSize, opCodeSize);
         while (iter.next()) |bytes| {
             var log: []u8 = &.{}; // "zero-init"
-            var log_storage:[100:0]u8 = undefined;
-            const offset = iter.index orelse amt_read;
+            var log_storage = [_:0]u8{0}**100;
             
             // The high nibble of bytes[0] contains the command
             // the lower nibble holds the variable part of the command.
@@ -102,27 +101,35 @@ pub fn disassemble(rom: std.fs.File, file_name: []const u8) !void {
                     log = try bufPrint(&log_storage, "Call subroutine at 0x{x:0>4}", .{jumpAddr});
                 },
                 0x3 => {
-                    // If vx != NN then
                     const vx:u8 = bytes[0] & 0x0F;
-                    const NN = bytes[1];
-                    log = try bufPrint(&log_storage, "If V{x} != {d}", .{vx, NN});
+                    const NN:u8 = bytes[1];
+                    log = try bufPrint(&log_storage, "If X{x} != {d}", .{vx, NN});
                 },
                 0x4 => {
-                    // If vx == NN then
                     const vx:u8 = bytes[0] & 0x0F;
-                    const NN = bytes[1];
-                    log = try bufPrint(&log_storage, "If V{x} == {d}", .{vx, NN});
+                    const NN:u8 = bytes[1];
+                    log = try bufPrint(&log_storage, "If X{x} == {d}", .{vx, NN});
                 },
                 0x5 => {
-                    // If vx != vy then
                     const vx:u8 = bytes[0] & 0x0F;
                     const vy:u8 = bytes[1] & 0xF0;
-                    log = try bufPrint(&log_storage, "If V{x} == V{x}", .{vx, vy});
+                    log = try bufPrint(&log_storage, "If X{x} == Y{x}", .{vx, vy});
+                },
+                0x6 => {
+                    const vx:u8 = bytes[0] & 0x0F;
+                    const NN:u8 = bytes[1];
+                    log = try bufPrint(&log_storage, "X{x} = {d}", .{vx, NN});
+                },
+                0x7 => {
+                    const vx:u8 = bytes[0] & 0x0F;
+                    const NN:u8 = bytes[1];
+                    log = try bufPrint(&log_storage, "X{x} += {d}", .{vx, NN});
                 },
                 else => {},
             }
 
             // Write the log out to a *.dis file
+            const offset = iter.index orelse amt_read;
             writeToFile(file, offset - opCodeSize, bytes, log);
         }
     }
