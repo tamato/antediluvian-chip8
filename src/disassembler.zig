@@ -88,7 +88,7 @@ pub fn disassemble(rom: std.fs.File, file_name: []const u8) !void {
                     // to get NNN from the high byte and low byte, combine them
                     // knock off the high nibble
                     const jumpAddr:u16 = @as(u16, (bytes[0] & 0x0F) << 0x4 | bytes[1]);
-                    log = try bufPrint(&log_storage, "Set PC to {d}", .{jumpAddr});
+                    log = try bufPrint(&log_storage, "Set PC to {x}", .{jumpAddr});
                 },
                 0x2 => {
                     // Call subroutine at nnn.
@@ -154,6 +154,46 @@ pub fn disassemble(rom: std.fs.File, file_name: []const u8) !void {
                 0xB => {
                     const jumpAddr:u12 = @as(u12, bytes[0] | bytes[1]);
                     log = try bufPrint(&log_storage, "jump to 0x{x:0>3}", .{jumpAddr});
+                },
+                0xC => {
+                    // The interpreter generates a random number from 0 to 255, which is then ANDed with the value NN. The results are stored in Vx. See instruction 8xy2 for more information on AND.
+                    const vx:u8 = bytes[0] & 0x0F;
+                    const NN:u8 = bytes[1];
+                    log = try bufPrint(&log_storage, 
+                        "Random num, 0-255 anded with 0x{x:0>2}. Then stored in V{x}", .{NN, vx});
+                },
+                0xD => {
+                    const vx:u8 = bytes[0] & 0x0F;
+                    const vy:u8 = bytes[1] >> 4;
+                    const n:u8 = bytes[0] & 0x0F;
+                    log = try bufPrint(&log_storage, "Draw sprite in I to V{x},V{x}, {x} bits long", .{vx,vy,n});
+                },
+                0xE => {
+                    // Key pressed/not pressed
+                    const vx:u8 = bytes[0] & 0x0F;
+                    const cmd:u8 = bytes[1];
+                    switch(cmd) {
+                        0x9E => log = try bufPrint(&log_storage, "Is V{x} NOT pressed?", .{vx}),
+                        0xA1 => log = try bufPrint(&log_storage, "Is V{x} pressed?", .{vx}),
+                        else => {},
+                    }
+                },
+                0xF => {
+                    // DT = delay timer
+                    const vx:u8 = bytes[0] & 0x0F;
+                    const cmd:u8 = bytes[1];
+                    switch (cmd) {
+                        0x07 => log = try bufPrint(&log_storage, "Store remaining DT in V{x}", .{vx}),
+                        0x0A => log = try bufPrint(&log_storage, "Wait for key V{x}", .{vx}),
+                        0x15 => log = try bufPrint(&log_storage, "Set DT to V{x}", .{vx}),
+                        0x18 => log = try bufPrint(&log_storage, "User sound for V{x}", .{vx}),
+                        0x1E => log = try bufPrint(&log_storage, "I += V{x}", .{vx}),
+                        0x29 => log = try bufPrint(&log_storage, "I = hex V{x}, see C8TECH10.htm", .{vx}),
+                        0x33 => log = try bufPrint(&log_storage, "Decode V{x} into binary-coded-decimal", .{vx}),
+                        0x55 => log = try bufPrint(&log_storage, "Save V{x}", .{vx}),
+                        0x65 => log = try bufPrint(&log_storage, "Load V{x}", .{vx}),
+                        else => {},
+                    }
                 },
                 else => {},
             }

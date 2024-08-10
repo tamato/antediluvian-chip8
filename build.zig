@@ -15,6 +15,36 @@ pub fn build(b: *std.Build) void {
     const optimize = b.standardOptimizeOption(.{});
     buildXXD(b, target, optimize);
     buildDis(b, target, optimize);
+    buildInterp(b, target, optimize);
+}
+
+fn buildInterp(b: *std.Build, target: std.Build.ResolvedTarget, optimize: std.builtin.OptimizeMode) void {
+    const exe = b.addExecutable(.{
+        .name = "interp",
+        .root_source_file = .{ .path = "src/interpreter.zig" },
+        .target = target,
+        .optimize = optimize,
+    });
+
+    b.installArtifact(exe);
+    const run_cmd = b.addRunArtifact(exe);
+    run_cmd.step.dependOn(b.getInstallStep());
+    if (b.args) |args| {
+        run_cmd.addArgs(args);
+    }
+    const run_step = b.step("interp", "Run the interpreter");
+    run_step.dependOn(&run_cmd.step);
+
+
+    const unit_tests = b.addTest(.{
+        .root_source_file = .{ .path = "src/interpreter.zig" },
+        .target = target,
+        .optimize = optimize,
+    });
+
+    const run_unit_tests = b.addRunArtifact(unit_tests);
+    const test_step = b.step("testinterp", "Run unit tests");
+    test_step.dependOn(&run_unit_tests.step);
 }
 
 fn buildXXD(b: *std.Build, target: std.Build.ResolvedTarget, optimize: std.builtin.OptimizeMode) void {
