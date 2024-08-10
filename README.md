@@ -50,8 +50,8 @@ ANNN | i = NNN          | |
 BNNN | jump0 NNN        | jump to address NNN + v0 |
 CXNN | vx = random NNN  | Random number 0-255 and NN |
 DXYN | sprite vx vy N   | vf = 1 on collision |
-EX9E | if vy -key then  | Is a key not pressed? |
-EXA1 | if vy key then   | Is a key pressed? |
+EX9E | if vx -key then  | Is a key not pressed? |
+EXA1 | if vx key then   | Is a key pressed? |
 FX07 | vx = delay       | |
 FX0A | vx = key         | wait for keypress |
 FX15 | delay = vx       | |

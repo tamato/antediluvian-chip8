@@ -112,7 +112,7 @@ pub fn disassemble(rom: std.fs.File, file_name: []const u8) !void {
                 },
                 0x5 => {
                     const vx:u8 = bytes[0] & 0x0F;
-                    const vy:u8 = bytes[1] & 0xF0;
+                    const vy:u8 = bytes[1] >> 4;
                     log = try bufPrint(&log_storage, "If X{x} == Y{x}", .{vx, vy});
                 },
                 0x6 => {
@@ -124,6 +124,36 @@ pub fn disassemble(rom: std.fs.File, file_name: []const u8) !void {
                     const vx:u8 = bytes[0] & 0x0F;
                     const NN:u8 = bytes[1];
                     log = try bufPrint(&log_storage, "X{x} += {d}", .{vx, NN});
+                },
+                0x8 => {
+                    const vx:u8 = bytes[0] & 0x0F;
+                    const vy:u8 = bytes[1] >> 4;
+                    const cmd:u8 = bytes[1] & 0x0F;
+                    switch (cmd) {
+                        0x0 => log = try bufPrint(&log_storage, "X{x} = Y{x}" , .{vx, vy}),
+                        0x1 => log = try bufPrint(&log_storage, "X{x} |= Y{x}", .{vx, vy}),
+                        0x2 => log = try bufPrint(&log_storage, "X{x} &= Y{x}", .{vx, vy}),
+                        0x3 => log = try bufPrint(&log_storage, "X{x} ^= Y{x}", .{vx, vy}),
+                        0x4 => log = try bufPrint(&log_storage, "X{x} += Y{x}", .{vx, vy}),
+                        0x5 => log = try bufPrint(&log_storage, "X{x} -= Y{x}", .{vx, vy}),
+                        0x6 => log = try bufPrint(&log_storage, "X{x} >> Y{x}", .{vx, vy}),
+                        0x7 => log = try bufPrint(&log_storage, "X{x} =- Y{x}", .{vx, vy}),
+                        0xE => log = try bufPrint(&log_storage, "X{x} << Y{x}", .{vx, vy}),
+                        else => {},
+                    }
+                },
+                0x9 => {
+                    const vx:u8 = bytes[0] & 0x0F;
+                    const vy:u8 = bytes[1] >> 4;
+                    log = try bufPrint(&log_storage, "If X{x} == Y{x}", .{vx, vy});
+                },
+                0xA => {
+                    const jumpAddr:u12 = @as(u12, bytes[0] | bytes[1]);
+                    log = try bufPrint(&log_storage, "I = 0x{x:0>3}", .{jumpAddr});
+                },
+                0xB => {
+                    const jumpAddr:u12 = @as(u12, bytes[0] | bytes[1]);
+                    log = try bufPrint(&log_storage, "jump to 0x{x:0>3}", .{jumpAddr});
                 },
                 else => {},
             }
@@ -150,5 +180,30 @@ pub fn writeToFile(file: std.fs.File, row_counter:usize, opCodes:[]const u8, dis
         std.debug.print("Error, {any}\n", .{err});
         return;
     };
+}
+
+const AddressCode = packed struct(u16) {
+    cmd:u4,
+    addr:u12,
+};
+
+test "Get just address out of bytes" {
+    const bytes:[2]u8 = .{0, 0xab};
+    const addr:AddressCode = @bitCast(bytes);
+    std.debug.print("I = 0x{x:0>4}\n", .{addr.addr});
+
+    const alpha:[2]u8 = .{0xab, 0xcd};
+    const addr2:AddressCode = @bitCast(alpha);
+    std.debug.print("alpha:0x{x:0>2} I = cmd:0x{x:0>1} 0x{x:0>3}\n", .{alpha, addr2.cmd, addr2.addr});
+
+    const hex:u16 = 0xabcd;
+    const addr3:AddressCode = @bitCast(hex);
+    std.debug.print("orig: 0x{x}, I = cmd:0x{x} 0x{x}\n", .{hex, addr3.cmd, addr3.addr});
+
+
+    const foo:AddressCode = .{.cmd = 0xa, .addr = 0xbcd };
+    std.debug.print("I = cmd:0x{x} 0x{x}\n", .{foo.cmd, foo.addr});
+    const bar:u16 = @bitCast(foo);
+    std.debug.print("0x{x}\n", .{bar});
 }
 
