@@ -54,7 +54,7 @@ pub fn disassemble(rom: std.fs.File, file_name: []const u8) !void {
     // The Chip-8 language is capable of accessing up to 4KB (4,096 bytes) of RAM, from location 0x000 (0) to 0xFFF (4095). The first 512 bytes, from 0x000 to 0x1FF, are where the original interpreter was located, and should not be used by programs
     // 4096 = 0x1000 hex
     while (true) {
-        var buf = [_]u8{0} ** std.mem.page_size;
+        var buf = [_]u8{0} ** 0x1000;
         const amt_read = reader.read(&buf) catch |err| {
             std.debug.print("Error, {any}", .{err});
             return;

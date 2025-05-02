@@ -45,7 +45,7 @@ fn xxd(rom: std.fs.File, file_name: []const u8) void {// {{{
     const col_byte_limit:u32 = 16;
 
     const reader = rom.reader();
-    var buf: [std.mem.page_size]u8 = undefined;
+    var buf: [0x1000]u8 = undefined;
     while (true) {
         const amt_read = reader.read(buf[0..]) catch |err| {
             std.debug.print("Error, {any}", .{err});

@@ -21,7 +21,7 @@ pub fn build(b: *std.Build) void {
 fn buildInterp(b: *std.Build, target: std.Build.ResolvedTarget, optimize: std.builtin.OptimizeMode) void {
     const exe = b.addExecutable(.{
         .name = "interp",
-        .root_source_file = .{ .path = "src/interpreter.zig" },
+        .root_source_file = b.path("src/interpreter.zig"),
         .target = target,
         .optimize = optimize,
     });
@@ -37,7 +37,7 @@ fn buildInterp(b: *std.Build, target: std.Build.ResolvedTarget, optimize: std.bu
 
 
     const unit_tests = b.addTest(.{
-        .root_source_file = .{ .path = "src/interpreter.zig" },
+        .root_source_file = b.path("src/interpreter.zig"),
         .target = target,
         .optimize = optimize,
     });
@@ -50,7 +50,7 @@ fn buildInterp(b: *std.Build, target: std.Build.ResolvedTarget, optimize: std.bu
 fn buildXXD(b: *std.Build, target: std.Build.ResolvedTarget, optimize: std.builtin.OptimizeMode) void {
     const exe = b.addExecutable(.{
         .name = "xxdC8",
-        .root_source_file = .{ .path = "src/xxd.zig" },
+        .root_source_file = b.path("src/xxd.zig"),
         .target = target,
         .optimize = optimize,
     });
@@ -66,7 +66,7 @@ fn buildXXD(b: *std.Build, target: std.Build.ResolvedTarget, optimize: std.built
 
 
     const unit_tests = b.addTest(.{
-        .root_source_file = .{ .path = "src/xxd.zig" },
+        .root_source_file = b.path("src/xxd.zig"),
         .target = target,
         .optimize = optimize,
     });
@@ -79,7 +79,7 @@ fn buildXXD(b: *std.Build, target: std.Build.ResolvedTarget, optimize: std.built
 fn buildDis(b: *std.Build, target: std.Build.ResolvedTarget, optimize: std.builtin.OptimizeMode) void {
     const exe = b.addExecutable(.{
         .name = "dis",
-        .root_source_file = .{ .path = "src/disassembler.zig" },
+        .root_source_file = b.path("src/disassembler.zig"),
         .target = target,
         .optimize = optimize,
     });
@@ -95,7 +95,7 @@ fn buildDis(b: *std.Build, target: std.Build.ResolvedTarget, optimize: std.built
 
 
     const unit_tests = b.addTest(.{
-        .root_source_file = .{ .path = "src/disassembler.zig" },
+        .root_source_file = b.path("src/disassembler.zig"),
         .target = target,
         .optimize = optimize,
     });
